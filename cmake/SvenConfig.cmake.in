@@ -1,0 +1,20 @@
+@PACKAGE_INIT@
+
+# SvenConfig.cmake
+#
+# Lets other projects do:
+#
+#   find_package(Sven CONFIG REQUIRED)
+#   target_link_libraries(mygame PRIVATE Sven::sven)
+#
+# Sven::sven already carries its own dependencies (SDL3, SDL3_image,
+# SDL3_mixer) via PUBLIC target_link_libraries, but those packages must
+# still be discoverable by find_package(), so we re-find them here.
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(SDL3       CONFIG)
+find_dependency(SDL3_image CONFIG)
+find_dependency(SDL3_mixer CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/SvenTargets.cmake")

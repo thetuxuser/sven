@@ -1,0 +1,71 @@
+name: CI
+
+# Builds Sven, its examples, demos, and unit tests on every push and pull
+# request. Keeping this green is the main signal that Sven still compiles
+# cleanly on both Linux and Windows.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  linux:
+    name: Linux (GCC)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libsdl3-dev libsdl3-image-dev libsdl3-mixer-dev \
+            cmake build-essential
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run unit tests
+        working-directory: build
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: ctest --output-on-failure
+
+  windows:
+    name: Windows (MSVC + vcpkg)
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: 'master'
+
+      - name: Install dependencies
+        run: |
+          vcpkg install sdl3:x64-windows sdl3-image:x64-windows sdl3-mixer:x64-windows
+
+      - name: Configure
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Run unit tests
+        working-directory: build
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: ctest -C Release --output-on-failure
