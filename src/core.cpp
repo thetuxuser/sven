@@ -32,11 +32,11 @@ void init() {
     // Open the default audio device with SDL3_mixer's recommended
     // defaults (nullptr spec = let SDL_mixer choose a sensible format).
     if (!g_audioReady) {
-        if (Mix_OpenAudio(0, nullptr)) {
+        if (MIX_OpenAudio(0, nullptr)) {
             g_audioReady = true;
         } else {
             std::fprintf(stderr,
-                "Sven: Could not initialise audio (Mix_OpenAudio failed: %s). "
+                "Sven: Could not initialise audio (MIX_OpenAudio failed: %s). "
                 "Sounds and music will be silently disabled.\n",
                 SDL_GetError());
             g_audioReady = false;
@@ -46,7 +46,7 @@ void init() {
 
 void shutdown() {
     if (g_audioReady) {
-        Mix_CloseAudio();
+        MIX_CloseAudio();
         g_audioReady = false;
     }
     SDL_Quit();
