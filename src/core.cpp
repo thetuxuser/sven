@@ -23,7 +23,7 @@ namespace {
 namespace Sven::Internal {
 
 void init() {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO) < 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_AUDIO)) {
         throw std::runtime_error(
             std::string("Sven: SDL_Init failed: ") + SDL_GetError()
         );
