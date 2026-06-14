@@ -44,7 +44,7 @@ Sound::Sound(const std::string& path)
         return;
     }
 
-    m_impl->audio = MIX_LoadAudio(path.c_str());
+    m_impl->audio = MIX_LoadAudio(Internal::getMixer(), path.c_str(), false);
 
     if (!m_impl->audio) {
         std::fprintf(stderr,
@@ -93,7 +93,7 @@ void Sound::play() const {
     if (!isValid()) return;
 
     // SDL_mixer 3.0 fire-and-forget playback.
-    MIX_PlayAudio(nullptr, m_impl->audio);
+    MIX_PlayAudio(Internal::getMixer(), m_impl->audio);
 }
 
 void Sound::setVolume(float volume) {
@@ -125,7 +125,7 @@ Music::Music(const std::string& path)
         return;
     }
 
-    m_impl->audio = MIX_LoadAudio(path.c_str());
+    m_impl->audio = MIX_LoadAudio(Internal::getMixer(), path.c_str(), false);
 
     if (!m_impl->audio) {
         std::fprintf(stderr,
@@ -177,22 +177,22 @@ void Music::play(bool loop) {
 
     // SDL_mixer 3.0: We'll use fire-and-forget for now, but
     // real music support should use tracks.
-    MIX_PlayAudio(nullptr, m_impl->audio);
+    MIX_PlayAudio(Internal::getMixer(), m_impl->audio);
 }
 
 void Music::pause() {
     if (!isValid()) return;
-    MIX_PauseAllTracks(nullptr);
+    MIX_PauseAllTracks(Internal::getMixer());
 }
 
 void Music::resume() {
     if (!isValid()) return;
-    MIX_ResumeAllTracks(nullptr);
+    MIX_ResumeAllTracks(Internal::getMixer());
 }
 
 void Music::stop() {
     if (!isValid()) return;
-    MIX_HaltAllTracks(nullptr);
+    MIX_HaltAllTracks(Internal::getMixer());
 }
 
 bool Music::isPlaying() const {
@@ -226,11 +226,11 @@ float Music::getVolume() const {
 
 namespace Sven::Internal {
 
-MIX_Audio* SoundAccess::get(const Sound& sound) {
+struct MIX_Audio* SoundAccess::get(const Sound& sound) {
     return sound.m_impl ? sound.m_impl->audio : nullptr;
 }
 
-MIX_Audio* MusicAccess::get(const Music& music) {
+struct MIX_Audio* MusicAccess::get(const Music& music) {
     return music.m_impl ? music.m_impl->audio : nullptr;
 }
 

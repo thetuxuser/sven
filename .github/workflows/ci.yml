@@ -26,7 +26,7 @@ jobs:
       - name: Install build dependencies (Linux)
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf autoconf-archive automake libtool
+          sudo apt-get install -y autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Install dependencies
         run: |

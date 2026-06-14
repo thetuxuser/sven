@@ -18,6 +18,7 @@ namespace {
     // running silently rather than crashing — Sound/Music just become
     // "invalid" and play() becomes a no-op.
     bool g_audioReady = false;
+    MIX_Mixer* g_mixer = nullptr;
 }
 
 namespace Sven::Internal {
@@ -30,13 +31,14 @@ void init() {
     }
 
     // Open the default audio device with SDL3_mixer's recommended
-    // defaults (nullptr spec = let SDL_mixer choose a sensible format).
+    // defaults.
     if (!g_audioReady) {
-        if (MIX_OpenAudio(0, nullptr)) {
+        g_mixer = MIX_CreateMixerDevice(0);
+        if (g_mixer) {
             g_audioReady = true;
         } else {
             std::fprintf(stderr,
-                "Sven: Could not initialise audio (MIX_OpenAudio failed: %s). "
+                "Sven: Could not initialise audio (MIX_CreateMixerDevice failed: %s). "
                 "Sounds and music will be silently disabled.\n",
                 SDL_GetError());
             g_audioReady = false;
@@ -46,10 +48,15 @@ void init() {
 
 void shutdown() {
     if (g_audioReady) {
-        MIX_CloseAudio();
+        MIX_DestroyMixer(g_mixer);
+        g_mixer = nullptr;
         g_audioReady = false;
     }
     SDL_Quit();
+}
+
+MIX_Mixer* getMixer() {
+    return g_mixer;
 }
 
 bool isAudioReady() {
