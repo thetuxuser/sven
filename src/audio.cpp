@@ -54,7 +54,7 @@ Sound::Sound(const std::string& path)
     }
 
     // Apply the default volume to the freshly-loaded audio.
-    MIX_SetAudioVolume(m_impl->audio, m_impl->volume);
+    MIX_SetAudioGain(m_impl->audio, m_impl->volume);
 }
 
 Sound::~Sound() {
@@ -102,7 +102,7 @@ void Sound::setVolume(float volume) {
     m_impl->volume = clampVolume(volume);
 
     if (m_impl->audio) {
-        MIX_SetAudioVolume(m_impl->audio, m_impl->volume);
+        MIX_SetAudioGain(m_impl->audio, m_impl->volume);
     }
 }
 
@@ -175,45 +175,45 @@ bool Music::isValid() const {
 void Music::play(bool loop) {
     if (!isValid()) return;
 
-    // SDL_mixer 3.0: We'll use fire-and-forget for now, but
-    // real music support should use tracks.
-    MIX_PlayAudio(Internal::getMixer(), m_impl->audio);
+    MIX_Track* track = Internal::getMusicTrack();
+    if (!track) return;
+
+    // Set the track's input and start playing.
+    MIX_SetTrackAudio(track, m_impl->audio);
+    MIX_PlayTrack(track, loop ? MIX_DURATION_INFINITE : 0, 0);
 }
 
 void Music::pause() {
-    if (!isValid()) return;
-    MIX_PauseAllTracks(Internal::getMixer());
+    MIX_Track* track = Internal::getMusicTrack();
+    if (track) MIX_PauseTrack(track);
 }
 
 void Music::resume() {
-    if (!isValid()) return;
-    MIX_ResumeAllTracks(Internal::getMixer());
+    MIX_Track* track = Internal::getMusicTrack();
+    if (track) MIX_ResumeTrack(track);
 }
 
 void Music::stop() {
-    if (!isValid()) return;
-    MIX_HaltAllTracks(Internal::getMixer());
+    MIX_Track* track = Internal::getMusicTrack();
+    if (track) MIX_HaltTrack(track);
 }
 
 bool Music::isPlaying() const {
-    if (!isValid()) return false;
-    // SDL_mixer 3.0 doesn't have a simple isPlayingMusic.
-    return true;
+    MIX_Track* track = Internal::getMusicTrack();
+    if (!track || !isValid()) return false;
+
+    // Check if our audio is the one currently assigned to the track.
+    return MIX_GetTrackAudio(track) == m_impl->audio;
 }
 
 void Music::setVolume(float volume) {
-    if (!isValid()) return;
-
-    // SDL_mixer's music volume is global (shared across all Music
-    // objects), but exposing it here keeps the API simple and obvious.
-    // In SDL3 Mixer, we set the volume on the mixer or track.
-    // For now we'll set it on the audio object if that's how it's handled.
-    MIX_SetAudioVolume(m_impl->audio, clampVolume(volume));
+    MIX_Track* track = Internal::getMusicTrack();
+    if (track) MIX_SetTrackGain(track, clampVolume(volume));
 }
 
 float Music::getVolume() const {
-    if (!isValid()) return 0.0f;
-    return MIX_GetAudioVolume(m_impl->audio);
+    MIX_Track* track = Internal::getMusicTrack();
+    return track ? MIX_GetTrackGain(track) : 0.0f;
 }
 
 } // namespace Sven

@@ -19,6 +19,7 @@ namespace {
     // "invalid" and play() becomes a no-op.
     bool g_audioReady = false;
     MIX_Mixer* g_mixer = nullptr;
+    MIX_Track* g_musicTrack = nullptr;
 }
 
 namespace Sven::Internal {
@@ -35,7 +36,19 @@ void init() {
     if (!g_audioReady) {
         g_mixer = MIX_CreateMixerDevice(0);
         if (g_mixer) {
-            g_audioReady = true;
+            // Create a dedicated track for music so we can control it
+            // independently of fire-and-forget sounds.
+            g_musicTrack = MIX_CreateTrack(g_mixer);
+            if (g_musicTrack) {
+                g_audioReady = true;
+            } else {
+                std::fprintf(stderr,
+                    "Sven: Could not create music track: %s\n",
+                    SDL_GetError());
+                MIX_DestroyMixer(g_mixer);
+                g_mixer = nullptr;
+                g_audioReady = false;
+            }
         } else {
             std::fprintf(stderr,
                 "Sven: Could not initialise audio (MIX_CreateMixerDevice failed: %s). "
@@ -48,7 +61,9 @@ void init() {
 
 void shutdown() {
     if (g_audioReady) {
+        if (g_musicTrack) MIX_DestroyTrack(g_musicTrack);
         MIX_DestroyMixer(g_mixer);
+        g_musicTrack = nullptr;
         g_mixer = nullptr;
         g_audioReady = false;
     }
@@ -57,6 +72,10 @@ void shutdown() {
 
 MIX_Mixer* getMixer() {
     return g_mixer;
+}
+
+MIX_Track* getMusicTrack() {
+    return g_musicTrack;
 }
 
 bool isAudioReady() {
