@@ -12,21 +12,31 @@ on:
 
 jobs:
   linux:
-    name: Linux (GCC)
+    name: Linux (GCC + vcpkg)
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Set up vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: '44819aa2a6c10e56065e2b0330e7d6c89d1d2574'
+
+      - name: Install build dependencies (Linux)
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libsdl3-dev libsdl3-image-dev libsdl3-mixer-dev \
-            cmake build-essential
+          sudo apt-get install -y autoconf autoconf-archive automake libtool libltdl-dev
+
+      - name: Install dependencies
+        run: |
+          vcpkg install sdl3 sdl3-image sdl3-mixer
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        run: >
+          cmake -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build build --config Release
@@ -48,7 +58,7 @@ jobs:
       - name: Set up vcpkg
         uses: lukka/run-vcpkg@v11
         with:
-          vcpkgGitCommitId: 'master'
+          vcpkgGitCommitId: '44819aa2a6c10e56065e2b0330e7d6c89d1d2574'
 
       - name: Install dependencies
         run: |
