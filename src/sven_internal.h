@@ -65,24 +65,24 @@ struct TextureAccess {
  * Friend bridge for Sound's internal MIX_Audio, used only within audio.cpp.
  */
 struct SoundAccess {
-    static struct MIX_Audio* get(const Sound& sound);
+    static MIX_Audio* get(const Sound& sound);
 };
 
 /**
  * Friend bridge for Music's internal MIX_Audio, used only within audio.cpp.
  */
 struct MusicAccess {
-    static struct MIX_Audio* get(const Music& music);
+    static MIX_Audio* get(const Music& music);
 };
 
 /**
  * Returns the global mixer instance.
  */
-struct MIX_Mixer* getMixer();
+MIX_Mixer* getMixer();
 
 /**
  * Returns the dedicated music track.
  */
-struct MIX_Track* getMusicTrack();
+MIX_Track* getMusicTrack();
 
 } // namespace Sven::Internal

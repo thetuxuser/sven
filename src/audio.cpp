@@ -1,9 +1,8 @@
 /**
  * audio.cpp — Sven Audio Implementation
  *
- * Implements Sven::Sound (short effects, via Mix_Chunk) and Sven::Music
- * (streaming background music, via Mix_Music). SDL3_mixer types never
- * appear in the public header.
+ * Implements Sven::Sound (short effects) and Sven::Music
+ * (streaming background music) via SDL3_mixer 3.0.
  *
  * If Sven's audio system failed to initialise (Internal::isAudioReady()
  * returns false), both classes simply act as if every file failed to
@@ -17,9 +16,9 @@
 
 namespace {
 
-/** Clamp a volume to the valid [0, 1] range. */
-float clampVolume(float v) {
-    return std::clamp(v, 0.0f, 1.0f);
+/** Clamp a gain (volume) to the valid [0, inf) range. */
+float clampGain(float v) {
+    return std::max(0.0f, v);
 }
 
 } // namespace
@@ -39,11 +38,10 @@ Sound::Sound(const std::string& path)
     : m_impl(new Impl())
 {
     if (!Internal::isAudioReady()) {
-        // Audio system unavailable — stay invalid, but don't print an
-        // error for every sound; core.cpp already warned once.
         return;
     }
 
+    // SDL3_mixer 3.x: MIX_LoadAudio requires a mixer, a path, and a predecode flag.
     m_impl->audio = MIX_LoadAudio(Internal::getMixer(), path.c_str(), false);
 
     if (!m_impl->audio) {
@@ -53,7 +51,7 @@ Sound::Sound(const std::string& path)
         return;
     }
 
-    // Apply the default volume to the freshly-loaded audio.
+    // Apply initial volume.
     MIX_SetAudioGain(m_impl->audio, m_impl->volume);
 }
 
@@ -92,15 +90,13 @@ bool Sound::isValid() const {
 void Sound::play() const {
     if (!isValid()) return;
 
-    // SDL_mixer 3.0 fire-and-forget playback.
+    // SDL3_mixer 3.x: MIX_PlayAudio is the "fire-and-forget" API.
     MIX_PlayAudio(Internal::getMixer(), m_impl->audio);
 }
 
 void Sound::setVolume(float volume) {
     if (!m_impl) return;
-
-    m_impl->volume = clampVolume(volume);
-
+    m_impl->volume = clampGain(volume);
     if (m_impl->audio) {
         MIX_SetAudioGain(m_impl->audio, m_impl->volume);
     }
@@ -138,9 +134,6 @@ Music::Music(const std::string& path)
 Music::~Music() {
     if (m_impl) {
         if (m_impl->audio) {
-            // SDL_mixer 3.0 has a different track-based model, but for
-            // simplicity we'll just destroy the audio object. If it's
-            // currently playing, the mixer should handle it.
             MIX_DestroyAudio(m_impl->audio);
         }
         delete m_impl;
@@ -157,9 +150,7 @@ Music::Music(Music&& other) noexcept
 Music& Music::operator=(Music&& other) noexcept {
     if (this != &other) {
         if (m_impl) {
-            if (m_impl->audio) {
-                MIX_DestroyAudio(m_impl->audio);
-            }
+            if (m_impl->audio) MIX_DestroyAudio(m_impl->audio);
             delete m_impl;
         }
         m_impl = other.m_impl;
@@ -178,8 +169,9 @@ void Music::play(bool loop) {
     MIX_Track* track = Internal::getMusicTrack();
     if (!track) return;
 
-    // Set the track's input and start playing.
+    // Assign this audio to the dedicated music track and start playback.
     MIX_SetTrackAudio(track, m_impl->audio);
+    // SDL3_mixer 3.x loop count: -1 = infinite, 0 = once.
     MIX_PlayTrack(track, loop ? MIX_DURATION_INFINITE : 0, 0);
 }
 
@@ -202,13 +194,14 @@ bool Music::isPlaying() const {
     MIX_Track* track = Internal::getMusicTrack();
     if (!track || !isValid()) return false;
 
-    // Check if our audio is the one currently assigned to the track.
+    // In SDL3_mixer, a track is considered "playing" if its assigned
+    // audio is what we expect.
     return MIX_GetTrackAudio(track) == m_impl->audio;
 }
 
 void Music::setVolume(float volume) {
     MIX_Track* track = Internal::getMusicTrack();
-    if (track) MIX_SetTrackGain(track, clampVolume(volume));
+    if (track) MIX_SetTrackGain(track, clampGain(volume));
 }
 
 float Music::getVolume() const {
@@ -219,18 +212,16 @@ float Music::getVolume() const {
 } // namespace Sven
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Internal helpers — currently unused outside this file, but provided for
-// consistency with TextureAccess and potential future use (e.g. checking
-// which Mix_Music is currently playing).
+// Internal helpers — provided for internal access to audio objects.
 // ─────────────────────────────────────────────────────────────────────────────
 
 namespace Sven::Internal {
 
-struct MIX_Audio* SoundAccess::get(const Sound& sound) {
+MIX_Audio* SoundAccess::get(const Sound& sound) {
     return sound.m_impl ? sound.m_impl->audio : nullptr;
 }
 
-struct MIX_Audio* MusicAccess::get(const Music& music) {
+MIX_Audio* MusicAccess::get(const Music& music) {
     return music.m_impl ? music.m_impl->audio : nullptr;
 }
 
